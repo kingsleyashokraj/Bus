@@ -1,0 +1,40 @@
+name: bus-alert
+
+on:
+  schedule:
+    # Two entries because GitHub cron is UTC-only and Cincinnati switches between
+    # EDT (UTC-4) and EST (UTC-5). Both are 06:03 local at different times of year;
+    # the script exits immediately for whichever one is not near START_LOCAL.
+    # If you change START_LOCAL in this file, shift these two hours to match.
+    - cron: "3 10 * * 1-5"   # 06:03 EDT (Mar-Nov)
+    - cron: "3 11 * * 1-5"   # 06:03 EST (Nov-Mar)
+  workflow_dispatch:          # lets you run it by hand from the Actions tab
+
+concurrency:
+  group: bus-alert
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Watch the bus
+        run: python bus_alert.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Settings you may want to change:
+          ROUTE: "3X"
+          STOP_NAME: "Montgomery,Kemper"   # words that must appear in the stop name
+          WALK_MIN: "8"
+          BUFFER_MIN: "3"
+          START_LOCAL: "06:00"             # when the watcher wakes up
+          BUS_FROM: "06:30"                # alert only for buses scheduled at your stop
+          BUS_TO: "08:30"                  #   between these times
+          WEATHER_UNTIL: "18:00"           # forecast window for umbrella / snow jacket note
+          # WEATHER_ALWAYS: "1"            # uncomment for a daily note even when it's dry
