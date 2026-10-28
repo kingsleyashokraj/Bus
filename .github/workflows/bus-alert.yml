@@ -1,0 +1,34 @@
+name: bus-alert
+
+on:
+  schedule:
+    - cron: "3 10 * * 1-5"   # 06:03 EDT (Mar-Nov)
+    - cron: "3 11 * * 1-5"   # 06:03 EST (Nov-Mar)
+  workflow_dispatch:          # lets you run it by hand from the Actions tab
+
+concurrency:
+  group: bus-alert
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Watch the bus
+        run: python bus_alert.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          ROUTE: "3X"
+          STOP_NAME: "Montgomery,Kemper"
+          WALK_MIN: "8"
+          BUFFER_MIN: "3"
+          START_LOCAL: "06:00"
+          BUS_FROM: "06:30"
+          BUS_TO: "08:30"
+          WEATHER_UNTIL: "18:00"
