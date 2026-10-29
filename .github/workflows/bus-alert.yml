@@ -2,6 +2,10 @@ name: bus-alert
 
 on:
   schedule:
+    # Two entries because GitHub cron is UTC-only and Cincinnati switches between
+    # EDT (UTC-4) and EST (UTC-5). Both are 06:03 local at different times of year;
+    # the script exits immediately for whichever one is not near START_LOCAL.
+    # If you change START_LOCAL in this file, shift these two hours to match.
     - cron: "3 10 * * 1-5"   # 06:03 EDT (Mar-Nov)
     - cron: "3 11 * * 1-5"   # 06:03 EST (Nov-Mar)
   workflow_dispatch:          # lets you run it by hand from the Actions tab
@@ -24,11 +28,14 @@ jobs:
         run: python bus_alert.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Settings you may want to change:
           ROUTE: "3X"
-          STOP_NAME: "Montgomery,Kemper"
+          STOP_NAME: "Montgomery,Kemper"   # words that must appear in the stop name
           WALK_MIN: "8"
           BUFFER_MIN: "3"
-          START_LOCAL: "06:00"
-           TARGET_TIMES: "07:40,08:10"
-           TOL_MIN: "6"
-          WEATHER_UNTIL: "18:00"
+          START_LOCAL: "06:00"             # when the watcher wakes up
+          TARGET_TIMES: "07:40,08:10"      # buses you take (scheduled time at your stop); one alert each
+          TOL_MIN: "6"                     # a bus within +/- 6 min of a target counts
+          # BUS_FROM / BUS_TO ("06:30" / "08:30") are used only if TARGET_TIMES is empty
+          WEATHER_UNTIL: "18:00"           # forecast window for umbrella / snow jacket note
+          # WEATHER_ALWAYS: "1"            # uncomment for a daily note even when it's dry
