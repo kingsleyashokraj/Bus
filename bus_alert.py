@@ -52,7 +52,9 @@ BUS_FROM = env("BUS_FROM", "06:30")                 # only alert buses scheduled
 BUS_TO = env("BUS_TO", "08:30")                     #   between these local times
 START_LOCAL = env("START_LOCAL", "06:00")           # when the scheduler launches the script
 POLL_SEC = int(env("POLL_SEC", "30"))
-MAX_ALERTS = int(env("MAX_ALERTS", "1"))            # stop after this many alerts per morning
+TARGET_TIMES = [secs_.strip() for secs_ in env("TARGET_TIMES", "").split(",") if secs_.strip()]
+TOL_MIN = float(env("TOL_MIN", "6"))                # a bus counts as a target if scheduled within this many min
+MAX_ALERTS = int(os.getenv("MAX_ALERTS") or (len(TARGET_TIMES) or 1))  # alerts per morning (default: one per target)
 FALLBACK_MILES = float(env("FALLBACK_MILES", "1.5"))  # used only if no arrival estimate exists
 
 NTFY_SERVER = env("NTFY_SERVER", "https://ntfy.sh")
@@ -81,6 +83,13 @@ def secs(hhmm):
 def gtfs_secs(t):
     h, m, s = (int(x) for x in t.strip().split(":"))
     return h * 3600 + m * 60 + s
+
+
+def wanted(sched_s):
+    """Is a bus scheduled at this many seconds after midnight one we should alert for?"""
+    if TARGET_TIMES:
+        return any(abs(sched_s - secs(t)) <= TOL_MIN * 60 for t in TARGET_TIMES)
+    return secs(BUS_FROM) <= sched_s <= secs(BUS_TO)
 
 
 def miles(lat1, lon1, lat2, lon2):
@@ -264,8 +273,7 @@ def sched_epoch(start_date, s):
 def estimates(stop, now):
     """Return {trip_id: (minutes_away, how)} for buses that have not reached the stop yet."""
     out = {}
-    lo, hi = secs(BUS_FROM), secs(BUS_TO)
-    trips = {t: v for t, v in stop["trips"].items() if lo <= v[0] <= hi}
+    trips = {t: v for t, v in stop["trips"].items() if wanted(v[0])}
     if not trips:
         return out
 
@@ -359,7 +367,7 @@ def main():
     log(f"watching route {ROUTE} at '{stop['name']}' (stop_id {stop['id']}); "
         f"alert when bus is <= {lead:.0f} min away")
 
-    end = secs(BUS_TO) + 600
+    end = (max(secs(t) for t in TARGET_TIMES) + int(TOL_MIN * 60) if TARGET_TIMES else secs(BUS_TO)) + 600
     alerted, sent, errors, warned = set(), 0, 0, False
     while sent < MAX_ALERTS:
         now = dt.datetime.now(TZ)
