@@ -54,7 +54,9 @@ If `--find-stop` picks the wrong side of the road, copy the right
 | Setting | Meaning |
 |---|---|
 | WALK_MIN / BUFFER_MIN | Alert fires when the bus is this many minutes (sum) from your stop |
-| BUS_FROM / BUS_TO | Only buses scheduled at your stop in this window trigger an alert |
+| TARGET_TIMES | The buses you take, as scheduled times at your stop, e.g. `07:40,08:10`. One alert per target. |
+| TOL_MIN | A bus within this many minutes of a target counts as that target (default 6) |
+| BUS_FROM / BUS_TO | Used only when TARGET_TIMES is empty: alert for buses scheduled in this window |
 | START_LOCAL | When the watcher wakes up (also shift the two cron lines) |
 | MAX_ALERTS | Alerts per morning (default 1) |
 
