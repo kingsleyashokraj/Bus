@@ -29,6 +29,6 @@ jobs:
           WALK_MIN: "8"
           BUFFER_MIN: "3"
           START_LOCAL: "06:00"
-          BUS_FROM: "06:30"
-          BUS_TO: "08:30"
+           TARGET_TIMES: "07:40,08:10"
+           TOL_MIN: "6"
           WEATHER_UNTIL: "18:00"
